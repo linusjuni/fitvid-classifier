@@ -29,7 +29,7 @@ deactivate
 ## Verify Installation
 
 ```bash
-python -c 'import torch, numpy, pandas, polars, sklearn, matplotlib, seaborn; print("All packages work!")'
+python -c 'import torch, torchvision, numpy, pandas, polars, sklearn, matplotlib, seaborn; print("All packages work!")'
 ```
 
 ## Running Scripts
