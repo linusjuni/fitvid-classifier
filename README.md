@@ -1,5 +1,8 @@
 # HPC Setup and Usage Guide
 
+## Project Structure
+`src/fitvid_classifier/` contains the reusable library code (models, utilities, etc). `scripts/` contains executable entry points that import from the library and run training/evaluation on HPC.
+
 ## First Time Setup
 
 ```bash
