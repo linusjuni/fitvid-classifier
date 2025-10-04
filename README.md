@@ -113,3 +113,42 @@ cat output_*.err   # View errors
 - Can disconnect and job continues
 - Better for long training runs
 - Automatic output logging
+
+## Adding new features
+
+### Adding a new model
+1. Create model file: `src/models/your_model.py`:
+    ```python
+    import torch.nn as nn
+    
+    class YourModel(nn.Module):
+        def __init__(self, num_classes=10):
+            super().__init__()
+            # Your architecture here
+        
+        def forward(self, x):
+            # Your forward pass
+            return x
+    ```
+
+2. Update `src/models/__init__.py`:
+    ```python
+    from .your_model import YourModel
+   __all__ = ['ResNetBaseline', 'YourModel']
+    ```
+
+3. Update `scripts/test_model.py` by adding your model to the `main()` function:
+    ```python
+    elif args.model_type == 'your_model':
+       model = YourModel(num_classes=10, pretrained=False)
+    ```
+
+4. Test it baby:
+    ```bash
+    python scripts/test_model.py --model_path checkpoints/your_model/best_model.pth --model_type your_model
+    ```
+
+#### Important Notes
+
+Dataset path: /dtu/datasets1/02516/ucf101_noleakage
+Checkpoints are gitignored - save to checkpoints/model_name/
