@@ -7,7 +7,7 @@ from torchvision import transforms as T
 
 DEFAULT_DATA_ROOT = os.environ.get(
     'UCF101_DATA_ROOT', 
-    '/dtu/datasets1/02516/ucf101_noleakage'
+    '/dtu/datasets1/02516/'
 )
 
 
