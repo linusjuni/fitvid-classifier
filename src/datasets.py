@@ -7,12 +7,12 @@ from torchvision import transforms as T
 
 # Dataset paths
 DATASET_PATHS = {
-    "ufc10": "/dtu/datasets1/02516/ufc10",  # Original Kaggle (with leakage)
-    "ucf101_noleakage": "/dtu/datasets1/02516/ucf101_noleakage",  # Corrected
+    "leakage": "/dtu/datasets1/02516/ufc10",
+    "no_leakage": "/dtu/datasets1/02516/ucf101_noleakage",
 }
 
 
-def get_data_root(dataset_name="ucf101_noleakage"):
+def get_data_root(dataset_name="no_leakage"):
     """Get the root directory for a dataset."""
     if dataset_name not in DATASET_PATHS:
         raise ValueError(
@@ -24,7 +24,7 @@ def get_data_root(dataset_name="ucf101_noleakage"):
 class FrameImageDataset(torch.utils.data.Dataset):
     """Dataset that returns individual frames from videos."""
 
-    def __init__(self, dataset_name="ucf101_noleakage", split="train", transform=None):
+    def __init__(self, dataset_name="no_leakage", split="train", transform=None):
         root_dir = get_data_root(dataset_name)
         self.frame_paths = sorted(glob(f"{root_dir}/frames/{split}/*/*/*.jpg"))
         self.df = pd.read_csv(f"{root_dir}/metadata/{split}.csv")
@@ -58,7 +58,7 @@ class FrameVideoDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        dataset_name="ucf101_noleakage",
+        dataset_name="no_leakage",
         split="train",
         transform=None,
         stack_frames=True,
