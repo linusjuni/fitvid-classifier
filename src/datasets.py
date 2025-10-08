@@ -7,8 +7,8 @@ from torchvision import transforms as T
 
 # Dataset paths
 DATASET_PATHS = {
-    "ufc10": "/dtu/datasets1/02516/ufc10",  # Original Kaggle (with leakage)
-    "ucf101_noleakage": "/dtu/datasets1/02516/ucf101_noleakage",  # Corrected
+    "ufc10": "/dtu/datasets1/02516/ufc10",
+    "ucf101_noleakage": "/dtu/datasets1/02516/ucf101_noleakage",
 }
 
 
