@@ -1,4 +1,4 @@
-"""Simple ResNet baseline for per-frame classification."""
+"""ResNet late fusion model that aggregates features across frames for video-level classification."""
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import resnet18, ResNet18_Weights
