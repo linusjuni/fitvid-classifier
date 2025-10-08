@@ -29,7 +29,7 @@ def main():
     # Load model
     if args.model_type == 'resnet18':
         model = ResNetBaseline(num_classes=10, pretrained=False)
-    if args.model_type == 'latefusion':
+    elif args.model_type == 'latefusion':
         model = ResNetLateFusion(num_classes=10, pretrained=False)
     else:
         raise ValueError(f"Unknown model type: {args.model_type}")
