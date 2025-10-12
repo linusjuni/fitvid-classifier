@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms as T
 
 from src.datasets import FrameImageDataset
-from src.models import ResNetBaseline
+from src.models import ResNetBaseline, ResNetLateFusion
 from src.training import test_model
 
 
@@ -29,6 +29,8 @@ def main():
     # Load model
     if args.model_type == 'resnet18':
         model = ResNetBaseline(num_classes=10, pretrained=False)
+    elif args.model_type == 'latefusion':
+        model = ResNetLateFusion(num_classes=10, pretrained=False)
     else:
         raise ValueError(f"Unknown model type: {args.model_type}")
     
