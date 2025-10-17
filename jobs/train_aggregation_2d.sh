@@ -15,7 +15,7 @@ module load python3/3.12.11
 source ~/projects/fitvid-classifier/venv/bin/activate
 
 python ~/projects/fitvid-classifier/scripts/train_aggregation_2d.py \
-    --dataset leakage \
+    --dataset ${DATASET:-no_leakage} \
     --epochs 100 \
     --batch_size 8 \
     --lr 1e-3 \
