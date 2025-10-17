@@ -1,6 +1,6 @@
 # Convenience script to submit all training jobs at once
 
-DATASET=${1:-no_leakage}
+DATASET=${1:-leakage}
 
 echo "Submitting all training jobs with dataset: $DATASET"
 echo ""

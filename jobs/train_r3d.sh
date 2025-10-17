@@ -19,4 +19,5 @@ python ~/projects/fitvid-classifier/scripts/train_r3d.py \
     --epochs 100 \
     --batch_size 8 \
     --lr 1e-3 \
-    --patience 5
+    --patience 5 \
+    --freeze_backbone
