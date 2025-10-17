@@ -9,7 +9,7 @@
 #BSUB -o outputs/output_agg2d_%J.out
 #BSUB -e outputs/output_agg2d_%J.err
 
-mkdir -p output
+mkdir -p outputs
 
 module load python3/3.12.11
 source ~/projects/fitvid-classifier/venv/bin/activate
