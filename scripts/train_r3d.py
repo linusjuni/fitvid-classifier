@@ -1,0 +1,117 @@
+import argparse
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torchvision import transforms as T
+from pathlib import Path
+
+from src.datasets import FrameVideoDataset
+from src.models import R3DModel
+from src.training import train_epoch, validate
+from src.utils.metrics import init_metrics, add_epoch_metrics, save_metrics
+from src.utils.early_stopping import EarlyStopping
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="no_leakage",
+        choices=["leakage", "no_leakage"],
+        help="Dataset to use: leakage or no_leakage (corrected)",
+    )
+    parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    parser.add_argument("--batch_size", type=int, default=4, help="Batch size (small for 3D CNN)")
+    parser.add_argument("--patience", type=int, default=5, help="Early stopping patience")
+    parser.add_argument("--min_delta", type=float, default=0.01, help="Minimum improvement for early stopping")
+    parser.add_argument("--freeze_backbone", action="store_true", help="Freeze backbone and only train classifier")
+    args = parser.parse_args()
+
+    # Initialize metrics
+    metrics = init_metrics()
+
+    # Early stopping
+    early_stopping = EarlyStopping(patience=args.patience, min_delta=args.min_delta, mode='min')
+
+    # Create checkpoints directory
+    checkpoint_dir = Path(f"checkpoints/r3d_{args.dataset}")
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    print(f"Dataset: {args.dataset}")
+    print(f"Freeze backbone: {args.freeze_backbone}")
+
+    # Data transforms
+    transform = T.Compose(
+        [
+            T.Resize((112, 112)),  # R3D typically uses 112x112
+            T.ToTensor(),
+            T.Normalize(mean=[0.43216, 0.394666, 0.37645], std=[0.22803, 0.22145, 0.216989]),  # Kinetics stats
+        ]
+    )
+
+    # Datasets - use FrameVideoDataset to get all frames together
+    train_dataset = FrameVideoDataset(
+        dataset_name=args.dataset, split="train", transform=transform, stack_frames=True
+    )
+    val_dataset = FrameVideoDataset(
+        dataset_name=args.dataset, split="val", transform=transform, stack_frames=True
+    )
+
+    train_loader = DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4
+    )
+
+    # Model
+    model = R3DModel(
+        num_classes=10, 
+        pretrained=True, 
+        freeze_backbone=args.freeze_backbone
+    ).to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+
+    # Training loop
+    best_val_acc = 0
+
+    for epoch in range(args.epochs):
+        train_loss, train_acc = train_epoch(
+            model, train_loader, criterion, optimizer, device
+        )
+        val_loss, val_acc = validate(model, val_loader, criterion, device)
+
+        print(f"Epoch {epoch + 1}/{args.epochs}")
+        print(f"  Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%")
+        print(f"  Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
+
+        metrics = add_epoch_metrics(metrics, epoch + 1, train_loss, train_acc, val_loss, val_acc)
+
+        # Save best model
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), checkpoint_dir / "best_model.pth")
+            print(f"  → Saved best model (val_acc: {val_acc:.2f}%)")
+
+        # Check early stopping
+        if early_stopping(val_loss):
+            print(f"Early stopping triggered after epoch {epoch + 1}")
+            break
+
+    # Save final model
+    torch.save(model.state_dict(), checkpoint_dir / "final_model.pth")
+    print(f"\nTraining complete. Best val accuracy: {best_val_acc:.2f}%")
+    print(f"Models saved to {checkpoint_dir}")
+
+    # Save metrics
+    save_metrics(metrics, checkpoint_dir / "training_metrics.csv")
+
+
+if __name__ == "__main__":
+    main()

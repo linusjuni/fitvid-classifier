@@ -1,15 +1,12 @@
-"""Train a simple per-frame ResNet18 baseline."""
-
 import argparse
-from html import parser
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from pathlib import Path
 
-from src.datasets import FrameImageDataset
-from src.models import ResNetBaseline
+from src.datasets import FrameVideoDataset
+from src.models import LateFusionModel2D
 from src.training import train_epoch, validate
 from src.utils.metrics import init_metrics, add_epoch_metrics, save_metrics
 from src.utils.early_stopping import EarlyStopping
@@ -26,9 +23,10 @@ def main():
     )
     parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
+    parser.add_argument("--batch_size", type=int, default=8, help="Batch size (smaller for video data)")
     parser.add_argument("--patience", type=int, default=5, help="Early stopping patience")
     parser.add_argument("--min_delta", type=float, default=0.01, help="Minimum improvement for early stopping")
+    parser.add_argument("--freeze_backbone", action="store_true", help="Freeze backbone and only train classifier")
     args = parser.parse_args()
 
     # Initialize metrics
@@ -38,12 +36,13 @@ def main():
     early_stopping = EarlyStopping(patience=args.patience, min_delta=args.min_delta, mode='min')
 
     # Create checkpoints directory
-    checkpoint_dir = Path(f"checkpoints/baseline_resnet18_{args.dataset}")
+    checkpoint_dir = Path(f"checkpoints/late_fusion_2d_{args.dataset}")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     print(f"Dataset: {args.dataset}")
+    print(f"Freeze backbone: {args.freeze_backbone}")
 
     # Data transforms
     transform = T.Compose(
@@ -54,12 +53,12 @@ def main():
         ]
     )
 
-    # Datasets
-    train_dataset = FrameImageDataset(
-        dataset_name=args.dataset, split="train", transform=transform
+    # Datasets - use FrameVideoDataset to get all frames together
+    train_dataset = FrameVideoDataset(
+        dataset_name=args.dataset, split="train", transform=transform, stack_frames=True
     )
-    val_dataset = FrameImageDataset(
-        dataset_name=args.dataset, split="val", transform=transform
+    val_dataset = FrameVideoDataset(
+        dataset_name=args.dataset, split="val", transform=transform, stack_frames=True
     )
 
     train_loader = DataLoader(
@@ -70,7 +69,11 @@ def main():
     )
 
     # Model
-    model = ResNetBaseline(num_classes=10, pretrained=True).to(device)
+    model = LateFusionModel2D(
+        num_classes=10, 
+        pretrained=True, 
+        freeze_backbone=args.freeze_backbone
+    ).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)

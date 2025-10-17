@@ -134,7 +134,7 @@ cat output_*.err   # View errors
 2. Update `src/models/__init__.py`:
     ```python
     from .your_model import YourModel
-   __all__ = ['ResNetBaseline', 'YourModel']
+   __all__ = ['MyModel', 'YourModel']
     ```
 
 3. Update `scripts/test_model.py` by adding your model to the `main()` function:
