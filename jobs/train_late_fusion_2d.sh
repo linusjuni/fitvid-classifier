@@ -6,8 +6,10 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -R "rusage[mem=20GB]"
 #BSUB -W 12:00
-#BSUB -o output_late2d_%J.out
-#BSUB -e output_late2d_%J.err
+#BSUB -o output/output_late2d_%J.out
+#BSUB -e output/output_late2d_%J.err
+
+mkdir -p output
 
 module load python3/3.12.11
 source ~/projects/fitvid-classifier/venv/bin/activate
