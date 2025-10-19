@@ -5,6 +5,9 @@ checkpoints/
 outputs/
 plots/
 
+# Mac specifics
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
