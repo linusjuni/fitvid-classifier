@@ -1,131 +1,138 @@
-# To run this script, use: 
-# python -m src.plotting.plot_training_metrics --title "Your Very Own Title"
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-import argparse
 
+# Set style
 sns.set_style("whitegrid")
 sns.set_palette("muted")
 
-def plot_training_metrics(checkpoint_dir: str = "checkpoints", output_dir: str = "plots", title: str = None):
-    """
-    Plot training metrics for all models in the checkpoints directory.
-    
-    Args:
-        checkpoint_dir: Path to checkpoints directory
-        output_dir: Path to save plots
-        title: Optional title prefix for plots
-    """
-    checkpoint_path = Path(checkpoint_dir)
-    output_path = Path(output_dir)
-    output_path.mkdir(exist_ok=True, parents=True)
-    
-    # Find all training_metrics.csv files
-    metric_files = list(checkpoint_path.glob("*/training_metrics.csv"))
-    
-    if not metric_files:
-        print(f"No training_metrics.csv files found in {checkpoint_dir}")
-        return
-    
-    # Load all data and find max epochs for consistent x-axis
-    data = {}
-    max_epochs = 0
-    for metric_file in metric_files:
-        model_name = metric_file.parent.name
-        df = pd.read_csv(metric_file)
-        data[model_name] = df
-        max_epochs = max(max_epochs, df['epoch'].max())
-    
-    # Add padding to x-axis
-    x_limit = max_epochs + 5
-    
-    # Plot 1: Training Loss
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for model_name, df in data.items():
-        ax.plot(df['epoch'], df['train_loss'], marker='o', label=model_name, linewidth=2, markersize=4)
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Loss', fontsize=12)
-    plot_title = f'{title} - Training Loss' if title else 'Training Loss'
-    ax.set_title(plot_title, fontsize=14, fontweight='bold')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    ax.set_xlim(0, x_limit)
-    plt.tight_layout()
-    output_file = output_path / 'training_loss.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"Plot saved to {output_file}")
-    plt.close()
-    
-    # Plot 2: Validation Loss
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for model_name, df in data.items():
-        ax.plot(df['epoch'], df['val_loss'], marker='o', label=model_name, linewidth=2, markersize=4)
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Loss', fontsize=12)
-    plot_title = f'{title} - Validation Loss' if title else 'Validation Loss'
-    ax.set_title(plot_title, fontsize=14, fontweight='bold')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    ax.set_xlim(0, x_limit)
-    plt.tight_layout()
-    output_file = output_path / 'validation_loss.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"Plot saved to {output_file}")
-    plt.close()
-    
-    # Plot 3: Training Accuracy
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for model_name, df in data.items():
-        ax.plot(df['epoch'], df['train_acc'], marker='o', label=model_name, linewidth=2, markersize=4)
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Accuracy (%)', fontsize=12)
-    plot_title = f'{title} - Training Accuracy' if title else 'Training Accuracy'
-    ax.set_title(plot_title, fontsize=14, fontweight='bold')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    ax.set_xlim(0, x_limit)
-    plt.tight_layout()
-    output_file = output_path / 'training_accuracy.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"Plot saved to {output_file}")
-    plt.close()
-    
-    # Plot 4: Validation Accuracy
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for model_name, df in data.items():
-        ax.plot(df['epoch'], df['val_acc'], marker='o', label=model_name, linewidth=2, markersize=4)
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Accuracy (%)', fontsize=12)
-    plot_title = f'{title} - Validation Accuracy' if title else 'Validation Accuracy'
-    ax.set_title(plot_title, fontsize=14, fontweight='bold')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    ax.set_xlim(0, x_limit)
-    plt.tight_layout()
-    output_file = output_path / 'validation_accuracy.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"Plot saved to {output_file}")
-    plt.close()
-    
-    print(f"\nAll plots saved to {output_path}")
+# Automatically discover all metric files
+checkpoint_path = Path("checkpoints")
+metric_files = list(checkpoint_path.glob("*/training_metrics.csv"))
 
+# Extract model names and splits from paths
+model_split_pairs = []
+for file_path in metric_files:
+    # e.g., "aggregation_2d_leakage" -> split into model and dataset
+    folder_name = file_path.parent.name
+    
+    # Split by the last occurrence of _leakage or _no_leakage
+    # Check for _no_leakage first since it's longer and contains _leakage
+    if folder_name.endswith("_no_leakage"):
+        model_name = folder_name[:-len("_no_leakage")]
+        split = "no_leakage"
+    elif folder_name.endswith("_leakage"):
+        model_name = folder_name[:-len("_leakage")]
+        split = "leakage"
+    else:
+        print(f"Warning: Could not parse folder name: {folder_name}")
+        continue
+    
+    model_split_pairs.append((model_name, split, file_path))
+
+# Get unique models and splits
+models = sorted(list(set([m for m, s, f in model_split_pairs])))
+splits = sorted(list(set([s for m, s, f in model_split_pairs])))
+
+print(f"Found {len(model_split_pairs)} training runs:")
+for model, split, _ in model_split_pairs:
+    print(f"  - {model} ({split})")
+print()
+
+# Color palette for models
+colors = sns.color_palette("muted", n_colors=len(models))
+model_colors = dict(zip(models, colors))
+
+def load_metrics(model_name, dataset):
+    """Load training metrics CSV for a given model and dataset"""
+    for m, s, file_path in model_split_pairs:
+        if m == model_name and s == dataset:
+            return pd.read_csv(file_path)
+    print(f"Warning: Metrics not found for {model_name}_{dataset}")
+    return None
+
+def plot_split(split_name, output_dir="plots"):
+    """Create accuracy and loss plots for a specific split"""
+    
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+    
+    # === ACCURACY PLOT ===
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    
+    # Plot each model
+    for model_name in models:
+        df = load_metrics(model_name, split_name)
+        
+        if df is None:
+            continue
+            
+        color = model_colors[model_name]
+        
+        # Accuracy plot
+        ax.plot(df['epoch'], df['train_acc'], 
+                label=f"{model_name} (train)", 
+                color=color, linestyle='--', linewidth=2)
+        ax.plot(df['epoch'], df['val_acc'], 
+                label=f"{model_name} (val)", 
+                color=color, linestyle='-', linewidth=2)
+    
+    # Configure accuracy plot
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Accuracy', fontsize=12)
+    ax.set_title(f'Training vs Validation Accuracy - {split_name.replace("_", " ").title()}', 
+                 fontsize=14, fontweight='bold')
+    ax.legend(loc='best', fontsize=10)
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    fig.savefig(output_path / f"accuracy_{split_name}.png", dpi=300, bbox_inches='tight')
+    print(f"Saved plot: {output_path / f'accuracy_{split_name}.png'}")
+    plt.close()
+    
+    # === LOSS PLOT ===
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    
+    # Plot each model
+    for model_name in models:
+        df = load_metrics(model_name, split_name)
+        
+        if df is None:
+            continue
+            
+        color = model_colors[model_name]
+        
+        # Loss plot
+        ax.plot(df['epoch'], df['train_loss'], 
+                label=f"{model_name} (train)", 
+                color=color, linestyle='--', linewidth=2)
+        ax.plot(df['epoch'], df['val_loss'], 
+                label=f"{model_name} (val)", 
+                color=color, linestyle='-', linewidth=2)
+    
+    # Configure loss plot
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Loss', fontsize=12)
+    ax.set_title(f'Training vs Validation Loss - {split_name.replace("_", " ").title()}', 
+                 fontsize=14, fontweight='bold')
+    ax.legend(loc='best', fontsize=10)
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    fig.savefig(output_path / f"loss_{split_name}.png", dpi=300, bbox_inches='tight')
+    print(f"Saved plot: {output_path / f'loss_{split_name}.png'}")
+    plt.close()
+
+def main():
+    """Generate all plots"""
+    print("Generating training curve plots...")
+    
+    for split in splits:
+        print(f"\nProcessing {split} split...")
+        plot_split(split)
+    
+    print("\nDone! All plots saved to 'plots/' directory")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Plot training metrics from checkpoint directories')
-    parser.add_argument('--checkpoint-dir', type=str, default='checkpoints', 
-                        help='Path to checkpoints directory (default: checkpoints)')
-    parser.add_argument('--output-dir', type=str, default='plots',
-                        help='Path to save plots (default: plots)')
-    parser.add_argument('--title', type=str, default=None,
-                        help='Optional title prefix for plots')
-    
-    args = parser.parse_args()
-    
-    plot_training_metrics(
-        checkpoint_dir=args.checkpoint_dir,
-        output_dir=args.output_dir,
-        title=args.title
-    )
+    main()
